@@ -14,6 +14,7 @@ import cv2
 import httpx
 import numpy as np
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 from streamlit_webrtc import VideoProcessorBase, WebRtcMode, webrtc_streamer
 
 log = logging.getLogger(__name__)
@@ -38,6 +39,17 @@ FRAGMENT_FPS = 24
 FRAGMENT_SECONDS = 3
 FRAGMENT_BUFFER = FRAGMENT_FPS * FRAGMENT_SECONDS
 COOLDOWN_FRAMES = FRAGMENT_FPS * 2  # 2 сек паузы после захвата фрагмента
+
+# WebRTC: явные STUN сервера для надёжности при VPN/мобильных сетях.
+# Для чистого LAN можно поставить iceServers=[] — только host-кандидаты.
+RTC_CONFIGURATION = {
+    "iceServers": [
+        {"urls": ["stun:stun.l.google.com:19302"]},
+        {"urls": ["stun:stun1.l.google.com:19302"]},
+        {"urls": ["stun:stun.cloudflare.com:3478"]},
+    ],
+    "iceTransportPolicy": "all",
+}
 
 
 class EnrollProcessor(VideoProcessorBase):
@@ -243,6 +255,11 @@ def _step_recording() -> None:
         progress = {"progress": {e: {"current": 0, "target": n} for e, n in schedule_dict.items()},
                     "is_complete": False}
 
+    # Автообновление пока запись не завершена: дёргаем /progress каждые 2 сек,
+    # чтобы UI отражал захваченные фрагменты без ручного клика по «Обновить».
+    if not progress.get("is_complete", False):
+        st_autorefresh(interval=2000, key="enroll-progress-refresh", limit=None)
+
     current_target = None
     for s in schedule:
         emo = s["emotion"]
@@ -276,6 +293,7 @@ def _step_recording() -> None:
     ctx = webrtc_streamer(
         key="enroll-webrtc",
         mode=WebRtcMode.SENDRECV,
+        rtc_configuration=RTC_CONFIGURATION,
         video_processor_factory=EnrollProcessor,
         media_stream_constraints={"video": True, "audio": False},
         async_processing=True,

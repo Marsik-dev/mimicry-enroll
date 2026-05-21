@@ -76,8 +76,9 @@ def train_npbk(
     from npbk.augmentation import augment_own
 
     own = np.stack(own_vectors)
-    aug = augment_own(own)
-    own_aug = np.vstack([own, aug])
+    # Аугментируем до 300 — стандарт для НПБК-обучения (см. evaluate_emotion.py / mixed).
+    target = max(300, len(own))
+    own_aug = augment_own(own, target_count=target)
 
     other_list: list[np.ndarray] = []
     if own_other_emotion_vectors:

@@ -17,12 +17,16 @@ services:
 
   app:
     build: .
-    ports:
-      - "8502:8501"  # Streamlit UI
-      - "8001:8000"  # FastAPI REST
+    # network_mode: host нужен для WebRTC: aiortc должен видеть реальные
+    # сетевые интерфейсы (192.168.x.y), иначе ICE-кандидаты с Docker bridge
+    # (172.x.x.x) не доходят до телефона/удалённого браузера.
+    network_mode: host
     environment:
-      DATABASE_URL: postgresql+psycopg://mimicry:mimicry123@db:5432/mimicry_enroll
+      DATABASE_URL: postgresql+psycopg://mimicry:mimicry123@localhost:5433/mimicry_enroll
       NEGATIVES_DIR: /data/negatives
+      STREAMLIT_PORT: "8502"
+      API_PORT: "8001"
+      INTERNAL_API_URL: "http://localhost:8001"
     depends_on:
       db:
         condition: service_healthy
