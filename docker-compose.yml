@@ -28,6 +28,7 @@ services:
         condition: service_healthy
     volumes:
       - negatives-cache:/data/negatives
+      - ./certs:/app/certs:ro
 
 volumes:
   pgdata:
