@@ -13,14 +13,13 @@ class Base(DeclarativeBase):
 class EnrolledUser(Base):
     __tablename__ = "enrolled_users"
 
-    uid: Mapped[str] = mapped_column(String(64), primary_key=True)
-    # NBKContainer serialized via .to_bytes()
+    uid: Mapped[str] = mapped_column(String(36), primary_key=True)
+    display_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    main_emotion: Mapped[str] = mapped_column(String(16), nullable=False)
+    key_type: Mapped[str] = mapped_column(String(16), default="ed25519")
     reference_container: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
-    # SSH private key encrypted with НПБК reference_code (Grasshopper CTR)
     encrypted_key: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
-    # KDF salt for Grasshopper
     key_salt: Mapped[bytes] = mapped_column(LargeBinary(16), nullable=False)
-    # SSH public key text (OpenSSH format, line to add to authorized_keys)
     public_key: Mapped[str] = mapped_column(Text, nullable=False)
     enrolled_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

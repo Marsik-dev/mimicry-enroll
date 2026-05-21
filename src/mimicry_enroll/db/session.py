@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker, Session
 
 from mimicry_enroll.config import settings
@@ -24,8 +24,18 @@ def get_engine():
     return _engine
 
 
+REQUIRED_COLUMNS = {"display_name", "main_emotion", "key_type"}
+
+
 def init_db() -> None:
-    Base.metadata.create_all(bind=get_engine())
+    """Создать таблицы. Если схема устарела (отсутствуют новые колонки) — пересоздать."""
+    engine = get_engine()
+    inspector = inspect(engine)
+    if inspector.has_table("enrolled_users"):
+        existing = {col["name"] for col in inspector.get_columns("enrolled_users")}
+        if not REQUIRED_COLUMNS.issubset(existing):
+            Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
 
 
 def get_session() -> Session:

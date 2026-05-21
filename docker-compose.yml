@@ -18,17 +18,17 @@ services:
   app:
     build: .
     ports:
-      - "8501:8501"  # Streamlit UI
-      - "8000:8000"  # FastAPI REST
+      - "8502:8501"  # Streamlit UI
+      - "8001:8000"  # FastAPI REST
     environment:
       DATABASE_URL: postgresql+psycopg://mimicry:mimicry123@db:5432/mimicry_enroll
+      NEGATIVES_DIR: /data/negatives
     depends_on:
       db:
         condition: service_healthy
-    # Для разработки с локальными пакетами:
-    # volumes:
-    #   - ../mimicry-preproc/src:/app/mimicry_preproc_src:ro
-    #   - ../npbk/src:/app/npbk_src:ro
+    volumes:
+      - negatives-cache:/data/negatives
 
 volumes:
   pgdata:
+  negatives-cache:
