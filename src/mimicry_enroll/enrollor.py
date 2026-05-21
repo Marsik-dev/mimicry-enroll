@@ -4,8 +4,6 @@ Enrollment pipeline: video → feature vectors → НПБК training → SSH key
 from __future__ import annotations
 
 import logging
-import os
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 

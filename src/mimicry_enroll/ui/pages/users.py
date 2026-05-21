@@ -33,7 +33,8 @@ def render():
 
             col_dl, col_del = st.columns(2)
             if col_dl.button("Скачать config.json", key=f"dl_{u.uid}"):
-                import base64, json
+                import base64
+                import json
                 config = {
                     "uid": u.uid,
                     "reference_container": base64.b64encode(u.reference_container).decode(),

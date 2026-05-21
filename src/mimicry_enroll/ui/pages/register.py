@@ -7,7 +7,6 @@ from pathlib import Path
 
 import streamlit as st
 
-from mimicry_enroll.config import settings
 from mimicry_enroll.crypto import encrypt_key
 from mimicry_enroll.db.models import EnrolledUser
 from mimicry_enroll.db.session import get_session
@@ -106,7 +105,8 @@ def render():
         st.caption("Добавьте эту строку в ~/.ssh/authorized_keys на целевом сервере.")
         st.code(result.public_key_text, language=None)
 
-        import base64, json
+        import base64
+        import json
         config = {
             "uid": uid,
             "reference_container": base64.b64encode(result.container_bytes).decode(),
