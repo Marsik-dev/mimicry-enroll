@@ -3,7 +3,7 @@
 
 Использует уже установленный mimicry_preproc для пути к модели face_landmarker.task
 и стандартный mediapipe API. Возвращает одну из 5 эмоций:
-happy, angry, surprise, sad, disgust — или None если правило не сработало.
+happy, angry, surprise, sad — или None если правило не сработало.
 
 Подтверждение эмоции: текущий кадр + хранение истории через `update()`,
 эмоция считается стабильной если N кадров подряд её предсказывают.
@@ -18,7 +18,7 @@ import numpy as np
 
 log = logging.getLogger(__name__)
 
-SUPPORTED_EMOTIONS = ("happy", "angry", "surprise", "sad", "disgust")
+SUPPORTED_EMOTIONS = ("happy", "angry", "surprise", "sad")
 
 # Confirmation: эмоция считается подтверждённой если она держится >= STABILITY_FRAMES кадров
 STABILITY_FRAMES = 8
@@ -46,8 +46,6 @@ def classify_blendshapes(blendshapes) -> str | None:
     brow_outer_up = _bs(blendshapes, "browOuterUpLeft") + _bs(blendshapes, "browOuterUpRight")
     eye_squint = _bs(blendshapes, "eyeSquintLeft") + _bs(blendshapes, "eyeSquintRight")
     jaw_open = _bs(blendshapes, "jawOpen")
-    nose_sneer = _bs(blendshapes, "noseSneerLeft") + _bs(blendshapes, "noseSneerRight")
-    mouth_upper_up = _bs(blendshapes, "mouthUpperUpLeft") + _bs(blendshapes, "mouthUpperUpRight")
 
     # Priority order: проверяем более характерные эмоции первыми
     if smile > 0.5 and frown < 0.15:
@@ -56,8 +54,6 @@ def classify_blendshapes(blendshapes) -> str | None:
         return "surprise"
     if brow_down > 0.55 and eye_squint > 0.3:
         return "angry"
-    if nose_sneer > 0.4 or (mouth_upper_up > 0.4 and brow_down > 0.2):
-        return "disgust"
     if frown > 0.3 and brow_inner_up > 0.15 and smile < 0.1:
         return "sad"
     return None

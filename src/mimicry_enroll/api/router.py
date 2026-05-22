@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 SESSION_TTL = 600  # 10 минут
-SUPPORTED_EMOTIONS = ("happy", "angry", "surprise", "sad", "disgust")
+SUPPORTED_EMOTIONS = ("happy", "angry", "surprise", "sad")
 KeyType = Literal["ed25519", "rsa", "imported"]
 
 # Расписание сбора: основная эмоция × 8, остальные × 2 (выбираем 3 случайных из 4)
@@ -320,9 +320,10 @@ def get_config(uid: str):
         user = db.get(EnrolledUser, uid)
         if not user:
             raise HTTPException(404, f"User '{uid}' not found")
+        display_name = user.display_name
         config = {
             "uid": uid,
-            "display_name": user.display_name,
+            "display_name": display_name,
             "main_emotion": user.main_emotion,
             "reference_container": base64.b64encode(user.reference_container).decode(),
             "encrypted_key": base64.b64encode(user.encrypted_key).decode(),
@@ -330,7 +331,7 @@ def get_config(uid: str):
         }
     finally:
         db.close()
-    filename = f"{user.display_name}-{uid[:8]}.json"
+    filename = f"{display_name}-{uid[:8]}.json"
     return JSONResponse(
         content=config,
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
@@ -344,9 +345,10 @@ def get_public_key(uid: str):
         user = db.get(EnrolledUser, uid)
         if not user:
             raise HTTPException(404, f"User '{uid}' not found")
-        return user.public_key
+        public_key = user.public_key
     finally:
         db.close()
+    return public_key
 
 
 @router.delete("/users/{uid}")

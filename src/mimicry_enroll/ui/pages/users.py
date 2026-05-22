@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import json
 from datetime import datetime
+from typing import Any
 
 import streamlit as st
 from sqlalchemy import select
@@ -16,7 +17,6 @@ EMOTION_EMOJI = {
     "angry": "😠",
     "surprise": "😲",
     "sad": "😢",
-    "disgust": "🤢",
 }
 
 
@@ -26,28 +26,62 @@ def _fmt_date(dt: datetime | None) -> str:
     return dt.strftime("%Y-%m-%d %H:%M")
 
 
-def _config_bytes(user: EnrolledUser) -> bytes:
-    payload = {
+def _row_to_dict(user: EnrolledUser) -> dict[str, Any]:
+    """Слепок ORM-объекта в простой dict, чтобы безопасно работать после db.close()."""
+    return {
         "uid": user.uid,
         "display_name": user.display_name,
         "main_emotion": user.main_emotion,
-        "reference_container": base64.b64encode(user.reference_container).decode(),
-        "encrypted_key": base64.b64encode(user.encrypted_key).decode(),
-        "key_salt": base64.b64encode(user.key_salt).decode(),
+        "key_type": user.key_type,
+        "enrolled_at": user.enrolled_at,
+        "n_vectors": user.n_vectors,
+        "mean_stability": user.mean_stability,
+        "code_length": user.code_length,
+        "public_key": user.public_key,
+        "reference_container": user.reference_container,
+        "encrypted_key": user.encrypted_key,
+        "key_salt": user.key_salt,
+    }
+
+
+def _config_bytes(u: dict[str, Any]) -> bytes:
+    payload = {
+        "uid": u["uid"],
+        "display_name": u["display_name"],
+        "main_emotion": u["main_emotion"],
+        "reference_container": base64.b64encode(u["reference_container"]).decode(),
+        "encrypted_key": base64.b64encode(u["encrypted_key"]).decode(),
+        "key_salt": base64.b64encode(u["key_salt"]).decode(),
     }
     return json.dumps(payload, ensure_ascii=False, indent=2).encode()
 
 
-def render():
-    st.header("👥 Зарегистрированные пользователи")
-
+def _load_users() -> list[dict[str, Any]]:
     db = get_session()
     try:
-        users = db.execute(
+        rows = db.execute(
             select(EnrolledUser).order_by(EnrolledUser.enrolled_at.desc())
         ).scalars().all()
+        return [_row_to_dict(u) for u in rows]
     finally:
         db.close()
+
+
+def _delete_user(uid: str) -> None:
+    db = get_session()
+    try:
+        user = db.get(EnrolledUser, uid)
+        if user is not None:
+            db.delete(user)
+            db.commit()
+    finally:
+        db.close()
+
+
+def render() -> None:
+    st.header("👥 Зарегистрированные пользователи")
+
+    users = _load_users()
 
     if not users:
         st.info("Пока никого. Перейдите в **Регистрация** чтобы добавить.")
@@ -63,40 +97,36 @@ def render():
         col.markdown(f"**{label}**")
     st.divider()
 
-    for user in users:
+    for u in users:
+        uid = u["uid"]
         cols = st.columns([2.5, 2, 1.5, 1.2, 1.8, 1.5, 1])
-        cols[0].write(user.display_name)
-        cols[1].code(user.uid[:8] + "…", language=None)
-        emoji = EMOTION_EMOJI.get(user.main_emotion, "❓")
-        cols[2].write(f"{emoji} {user.main_emotion}")
-        cols[3].write(user.key_type)
-        cols[4].write(_fmt_date(user.enrolled_at))
+        cols[0].write(u["display_name"])
+        cols[1].code(uid[:8] + "…", language=None)
+        emoji = EMOTION_EMOJI.get(u["main_emotion"], "❓")
+        cols[2].write(f"{emoji} {u['main_emotion']}")
+        cols[3].write(u["key_type"])
+        cols[4].write(_fmt_date(u["enrolled_at"]))
 
-        filename = f"{user.display_name}-{user.uid[:8]}.json"
+        filename = f"{u['display_name']}-{uid[:8]}.json"
         cols[5].download_button(
             "⬇ Скачать",
-            data=_config_bytes(user),
+            data=_config_bytes(u),
             file_name=filename,
             mime="application/json",
-            key=f"dl_{user.uid}",
+            key=f"dl_{uid}",
             use_container_width=True,
         )
 
-        if cols[6].button("🗑", key=f"del_{user.uid}", help="Удалить пользователя"):
-            db = get_session()
-            try:
-                db.delete(db.get(EnrolledUser, user.uid))
-                db.commit()
-            finally:
-                db.close()
+        if cols[6].button("🗑", key=f"del_{uid}", help="Удалить пользователя"):
+            _delete_user(uid)
             st.rerun()
 
     with st.expander("Подробности (векторы, стабильность, public keys)"):
-        for user in users:
-            st.markdown(f"**{user.display_name}** — `{user.uid}`")
+        for u in users:
+            st.markdown(f"**{u['display_name']}** — `{u['uid']}`")
             st.text(
-                f"  Векторов: {user.n_vectors}  "
-                f"Стабильность: {user.mean_stability:.3f}  "
-                f"Длина кода: {user.code_length}"
+                f"  Векторов: {u['n_vectors']}  "
+                f"Стабильность: {u['mean_stability']:.3f}  "
+                f"Длина кода: {u['code_length']}"
             )
-            st.code(user.public_key, language=None)
+            st.code(u["public_key"], language=None)

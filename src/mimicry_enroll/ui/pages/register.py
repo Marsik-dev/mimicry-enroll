@@ -24,14 +24,12 @@ EMOTION_EMOJI = {
     "angry": "😠",
     "surprise": "😲",
     "sad": "😢",
-    "disgust": "🤢",
 }
 EMOTION_LABELS = {
     "happy": "😊 happy (улыбка)",
     "angry": "😠 angry (нахмуренный)",
     "surprise": "😲 surprise (удивление)",
     "sad": "😢 sad (грусть)",
-    "disgust": "🤢 disgust (отвращение)",
 }
 
 API_URL = os.environ.get("INTERNAL_API_URL", "http://localhost:8000")
